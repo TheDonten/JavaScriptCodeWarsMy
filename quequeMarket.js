@@ -1,4 +1,3 @@
-
 const find_free = (element,index, array) => {
     if(element.free === true){
         return true;
@@ -7,78 +6,95 @@ const find_free = (element,index, array) => {
 };
 
 const find_min_nonNull = (array) => {
-  if(array.length === 1){
-    return 0;
-  }
-  let min_element = array.quque_time;
-  let index = 0;
-  
-  for (let i = 1; i < array.length; i++){
-     if(min_element > array[i].quque_time){
-       min_element = array[i].quque_time;
-       index = 1;
-     }
-  }
-  if(min_element === 0){
-    return -1;
-  }
-  return index;
+    if(array.length === 1){
+        return 0;
+    }
+    let min_element = array[0].quque_time;
+    let index = 0;
+
+    for (let i = 1; i < array.length; i++){
+        if((min_element > array[i].quque_time) && array[i].quque_time !== 0 || min_element === 0){
+            min_element = array[i].quque_time;
+            index = i;
+        }
+    }
+    if(min_element === 0){
+        return -1;
+    }
+    return index;
 }
 
 
 function queueTime(customers, n) {
-    //TODO
-   
-    let array_checkout = [];
-    let check_out_time = [];
-    for(let i = 0; i < n; i++){
+
+    //let array_checkout = [];
+    let check_out_time = []; // массив касс
+    for(let i = 0; i < n; i++){ //заполняем массив нулями
         check_out_time.push({all_time : 0,quque_time : 0, free : true});
     }
-    // check_out_time[0].quque_time = 5;
-    // check_out_time[1].quque_time = 2;
-    // check_out_time[2].quque_time = 1;
-    let prom = 0;
-    let max_of_time = 0;
-    let index_min_of_time = 0;
+
+    let prom = 0; // промежутучная переменная которая хранит quque_time текущего минимального индекса по времени
+    let max_of_time = 0; // сколько всего времени ушло
+    let index_min_of_time = 0; // индекс минимального времени затрачиваемого клиента на кассе.
     let que_get = 0; //это сколько клиентов обслужено, по факту если он на кассе, то считается что он уже обслужен
     let max_client = 0; // это сколько сейчас клиентов на кассах
-    let this_index = 0;
-    let free_client = 0;
-    while (que_get <= customers.length || max_client !== 0){
-        while (max_client !== n && que_get <= customers.length){
-            this_index = check_out_time.findIndex(find_free);
-            check_out_time[this_index].free = false;
-            check_out_time[this_index].quque_time = customers[que_get];
-            check_out_time[this_index].all_time += customers[que_get];
-            que_get += 1;
-            max_client += 1;
-        }
-
-//         index_min_of_time = check_out_time.indexOf(check_out_time.reduce( (IMax,curr,index,array) => {
-//             return curr.quque_time < IMax.quque_time ? curr : IMax;
-//         }));
-
-        index_min_of_time = find_min_nonNull(check_out_time);
-
-        if(index_min_of_time === -1){
-          break;
-        }
-      
-        max_of_time += check_out_time[index_min_of_time].quque_time;
-        prom = check_out_time[index_min_of_time].quque_time;
+    let this_index = 0; //текущей индекс
+ 
+    while (que_get < customers.length || max_client > 0){ // Данный while обслуживает минимального клиента и смотрит кто свободен
         
+        while (max_client < n && que_get < customers.length){ // в данном while заполняем кассы клиентами
+            this_index = check_out_time.findIndex(find_free); //находим свободную кассу
+            check_out_time[this_index].free = false; //говорим что она занята
+            check_out_time[this_index].quque_time = customers[que_get]; // устанавливаем текущее время
+            check_out_time[this_index].all_time += customers[que_get]; //сколько всего касса времени отработала
+            que_get += 1; //обновляем список обслуженных клиентов
+            max_client += 1; //обновляем список занятых касс
+        }
+
+
+        index_min_of_time = find_min_nonNull(check_out_time); //находим минимальное время затрачиваемое клиентом на кассе, отличное от нуля
+
+        max_of_time += check_out_time[index_min_of_time].quque_time; //сколько всего времени затраченно
+        prom = check_out_time[index_min_of_time].quque_time; //промежуточная перемеенная
+        
+        //В методе check_out_time.forEach проходим по всем элементам и вычитаем минимально время quque_time с кассы.
+
         check_out_time.forEach( (currentValue) => {
+            if(currentValue.quque_time - prom < 0)
+                return;
             currentValue.quque_time -= prom;
-            if(currentValue.quque_time <= 0){
+            if(currentValue.quque_time <= 0 && !currentValue.free){
                 currentValue.free = true;
                 currentValue.quque_time = 0;
                 max_client -= 1;
             }
         })
     }
-    // console.log(check_out_time.findIndex(find_free));
-    // console.log(check_out_time.findIndex(queueTime))
-
+    //На самом деле это выполняется не совсем для подсчета, а для модуляции работы воркеров. Данный функия queueTime играет в роли наблюдателя. То есть, воркеры выполняются 
+        //параллельно,а чтобы отследить и увидеть, что какой то воркер освобоидился нужно сделать прерывани и посмотреть, какой из воркеров выполнил свою задачу. 
+        //Допустим, что здесь стоит допущение, что прерывание происходит каждый раз, когда пройдет минимальное quque_time. Поэтому чтобы получить новое минимально время quque_time
+        //вычитаем из всех quque_time минимальное quque_time, тем самым программа может наблюдать, сколько другим кассам осталось работать.
+        //В данной реализации этой задачи, подсчет затраченного всего времени будет являться дополнением к ней, так как по сути данное решение выполняет модуляцию поведения, а не 
+        //подсчет всего времени затраченного на обслуживание клиентов.
+    
+    
+    //Для того, чтобы имеено подсчитать затраченное время, программа будет реализоваться по другому. Достаточно создать новый массив касс (пусть будет называться mark) и последовательно закидывать числа из массива customers
+    //Когда массив mark будет заполнен ( тоесть, у него будут отсутсовать нулевые элементы), то дальше достатчно каждому минимальному элементу из mark добавить число из очереди customers.(Так можно сделать, потому что 
+    //поиск min будет являться по своей сути методом check_out_time. В этом можно убедиться, просто вычитая каждый раз найденный min из всех элементов массива mark.
+    //Example:          
+    // mark[10,5,7] => min 5            
+    // mark[5,8,2] => min 2 Добавили элемент 8
+    // mark[3,6,0] => min 3
+    // mark[0,3,0] => min 3
+    //Итого затраченного времени 13.
+    
+    //Пример если не вычитать,а искать min элемент массива mark и добавлять элемент из очереди customers.
+    // mark [10,5,7] => min 5, добавляем ему 8
+    // mark [10,13,7] ищем max элемент.
+    // Итого затраченного времени тоже будет 13, но как видно это в разы быстрее.
+    
+    //Как видно из примеров, способ решения который здесь показан, является по сути контроллером свободных воркеров, чтобы передать им другую задачу, а подсчет времени является побочкой.
+    //Во втором примере используется алгоритмические особенности, и он предназначен только для подсчета времени, но не фактической реализации очереди к кассе.
     return max_of_time;
-  
+
 }
